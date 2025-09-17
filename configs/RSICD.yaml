@@ -1,0 +1,156 @@
+OUTPUT_DIR: './work_dirs/RSICD_debug'
+MIXED_PRE: False
+####################################### DATASETS #######################################
+DATASETS:
+  TRAIN: 'MSCoCoEnd2EndDatasetRS'
+  VAL: 'MSCoCoEnd2EndDatasetRS'
+  TEST: 'MSCoCoEnd2EndDatasetRS'
+
+###################################### DATALOADER ######################################
+DATALOADER:
+  TRAIN_BATCH_SIZE: 16
+  TEST_BATCH_SIZE: 32  
+  NUM_WORKERS: 1    
+  ENTITY_NUM: 6
+  AUGMENT: 1.0  
+  FEATS_FOLDER: ''
+  ANNO_FOLDER:  './open_source_dataset/remote_sensing/RSICD'
+  IMG_PATH:  './RSICD/imgs/'
+  ANNO_FOLDER_TRAIN:  './RSICD/train_class_entity.pkl'
+  ANNO_FOLDER_VAL:  './RSICD/val_class_entity.pkl'
+  ANNO_FOLDER_TEST:  ''./RSICD/test_class_entity.pkl'
+  ANNO_FOLDER_TRAIN_ID: './RSICD/train_idx2path.json'
+  ANNO_FOLDER_VAL_ID: '.'./RSICD/val_idx2path.json'
+  ANNO_FOLDER_TEST_ID: './RSICD/test_idx2path.json'
+  SEQ_PER_SAMPLE:  5
+  SAMPLE_PROB: 0.2
+  MAX_FEAT_NUM: 145  #145    #384
+  INPUT_SIZE: 224   # 224  #384
+#  INPUT_SIZE: 384   # 224  #384
+
+######################################### Engine #########################################
+ENGINE:
+  NAME: 'DefaultTrainer'
+
+######################################### Scheduled sampling #########################################
+SCHEDULED_SAMPLING:
+  START_EPOCH: 9999
+  INC_EVERY_EPOCH: 3
+  INC_PROB: 0.05
+  MAX_PROB: 0.5
+
+######################################### MODEL #########################################
+MODEL:
+  CLASS_NUM: 31
+  CLASS_NAME: './open_source_dataset/remote_sensing/RSICD/modified_2/RSICD_class_list.txt'
+  VOCAB_SIZE: 1170
+  META_ARCHITECTURE: 'TransformerE2EEncoderDecoder'
+  FREEZEN: True
+  CLIP_S: True
+  CLIP_E: True
+  BACKBONE: 'CLIP'
+  SWIN_PTH: 'official.pth'
+  BACKBONE_DIM: 1536
+  F_NUM: 3
+  ENCODER: 'BaselineEncoder'
+  ENCODER_DIM: 512  
+  DECODER: 'BaselineDecoder'
+  DECODER_DIM: 512  
+  PREDICTOR: 'BasePredictor'
+  PRED_DROPOUT: 0.2
+  MAX_SEQ_LEN: 25
+  USE_EMA: False
+  EMA_DECAY: 0.9999
+
+#################################### Token embedding ####################################
+  TOKEN_EMBED:
+    NAME: 'TokenBaselineEmbedding'
+    DIM: 512   #512
+    ACTIVATION: 'none'
+    USE_NORM: True
+    DROPOUT: 0.1
+    POSITION: 'SinusoidEncoding'
+
+#################################### Visual embedding ####################################
+  VISUAL_EMBED:
+    NAME: 'VisualBaselineEmbedding'
+    IN_DIM: [768,768,768]
+    G_IN_DIM: 1536
+    OUT_DIM: 512    #512
+    ACTIVATION: 'relu'
+    USE_NORM: True
+    DROPOUT: 0.2
+
+####################################### BERT ############################################
+  BERT:
+    HIDDEN_SIZE: 512   #512
+    HIDDEN_DROPOUT_PROB: 0.1
+    HIDDEN_ACT: "relu"
+    NUM_ATTENTION_HEADS: 8
+    INTERMEDIATE_SIZE: 2048
+    INTERMEDIATE_DROP: 0.2
+    FFN_DROPOUT_PROB: 0.2
+    ATTENTION_PROBS_DROPOUT_PROB: 0.1
+    NUM_HIDDEN_LAYERS: 3  #6
+    NUM_GENERATION_LAYERS: 3  #6
+    LAYER_DROP: 0.0
+
+####################################### Optimizer #######################################
+SOLVER:
+  NAME: 'AdamW'
+  SPECIAL_WEIGHT_DECAY: [ { 'backbone.backbone': 0.1} ]
+  EPOCH: 12
+  CHECKPOINT_PERIOD: 1
+  EVAL_PERIOD: 1
+  BASE_LR: 0.0004
+  BIAS_LR_FACTOR: 1.0
+  WEIGHT_DECAY: 0.01
+  WEIGHT_DECAY_NORM: 0.0
+  WEIGHT_DECAY_BIAS: 0.0
+  MOMENTUM: 0.9
+  DAMPENING: 0.0
+  NESTEROV: 0.0
+  BETAS: [0.9, 0.999]
+  EPS: 1e-8
+  GRAD_CLIP: 0.1
+  GRAD_CLIP_TYPE: 'value'
+  NORM_TYPE: 2.0
+  WRITE_PERIOD: 5
+
+###################################### lr scheduler #######################################
+LR_SCHEDULER:
+  NAME: 'WarmupMultiStepLR'
+  WARMUP: 3
+  STEPS: (3,4,5,6,9,12,15 )  #V2    15
+  GAMMA: 0.6
+  WARMUP_METHOD: "linear"
+
+####################################### losses #######################################
+LOSSES:
+  NAMES: ['CrossEntropy']
+#  NAMES: ['LabelSmoothing']
+#  LABELSMOOTHING: 0.1
+
+####################################### scorer #######################################
+SCORER:
+  NAME: 'BaseScorer'
+  TYPES: ['Cider']#['Cider']Bleu
+  WEIGHTS: [1.0]
+  GT_PATH: './open_source_dataset/remote_sensing/RSICD/modified_2/train_gts.pkl'
+  CIDER_CACHED: './open_source_dataset/remote_sensing/RSICD/modified_2/train_cider.pkl'
+  EOS_ID: 0
+
+####################################### decode strategy #######################################
+DECODE_STRATEGY:
+  NAME: 'BeamSearcher'
+  BEAM_SIZE: 3
+
+####################################### evaluation #######################################
+INFERENCE:
+  NAME: 'COCOEvaler'
+  VOCAB: './open_source_dataset/remote_sensing/RSICD/modified_2/vocabulary.txt'
+  ID_KEY: 'image_id'
+  VALUE: 'caption'
+  VAL_ANNFILE: './open_source_dataset/remote_sensing/RSICD/modified_2/val.json'
+  TEST_ANNFILE: './open_source_dataset/remote_sensing/RSICD/modified_2/test.json'
+  GENERATION_MODE: True
